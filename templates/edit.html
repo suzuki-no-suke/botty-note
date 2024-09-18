@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="jp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page.title %}{{ page.title }}{% else %}Create new page{% endif %}</title>
+    <!-- Bulma CSS CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+</head>
+<body>
+
+    <!-- トップバー -->
+    {% module Template("modules/header.html") %}
+
+    <!-- レイアウト全体 -->
+    <div class="container mt-5">
+        <div class="columns">
+
+            <!-- 左側メニュー -->
+            <!-- なし -->
+
+            <!-- コンテンツエリア -->
+            <div class="column">
+                <form action="/edit" method="post">
+                    <div class="field">
+                        <label for="folder" class="label">フォルダ</label>
+                        <div class="control">
+                            <input type="text" id="folder" name="folder" class="input" placeholder="フォルダ名を入力してください" readonly>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="title" class="label">タイトル</label>
+                        <div class="control">
+                            <input type="text" id="title" name="title" class="input" placeholder="タイトルを入力してください">
+                        </div>
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <button type="submit" class="button is-primary">保存/作成</button>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="content" class="label">テキスト</label>
+                        <div class="control">
+                            <textarea id="content" name="content" class="textarea" placeholder="テキストを入力してください"></textarea>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="tags" class="label">タグ</label>
+                        <div class="control">
+                            <input type="text" id="tags" name="tags" class="input" placeholder="タグを入力してください">
+                        </div>
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <button type="submit" class="button is-primary">保存/作成</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- フッター -->
+    {% module Template("modules/footer.html") %}
+
+</body>
+</html>
