@@ -17,13 +17,11 @@
         <div class="columns">
 
             <!-- 左側メニュー -->
-            {% module Template("modules/leftmenu.html") %}
+            {% module Template("modules/leftmenu.html", leftmenu=leftmenu) %}
 
             <!-- コンテンツエリア -->
             <div class="column">
-                <section class="section">
-                    {% raw contents %}
-                </section>
+                {% raw contents %}
             </div>
         </div>
     </div>

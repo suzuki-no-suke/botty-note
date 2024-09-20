@@ -7,29 +7,17 @@ load_dotenv()
 
 # ---------------------------------------------------------
 
-def render_leftmenu(self):
-    pass
 
-def render_toppage(self):
-    pass
-
-def render_page(self, path):
-    pass
-
-
+from src.md.MarkdownRenderer import MarkdownRenderer
+from src.etc.FolderParser import FolderParser, ContentType
 
 
 # ---------------------------------------------------------
-
-class MainHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.render("index.html")
 
 class EditPageHandler(tornado.web.RequestHandler):
     def get(self, path):
         savedir_base = os.getenv('FILES_ROOT', './filekeep/fileroot/')
         expected_fullpath = os.path.join(savedir_base, path)
-        title = path
         if os.path.exists(expected_fullpath):
             print("file exists")
             self.render("edit.html")
@@ -41,108 +29,78 @@ class EditPageHandler(tornado.web.RequestHandler):
         pass
 
 class ViewPageHandler(tornado.web.RequestHandler):
-    def is_file(self, path):
-        return True
-
-    def is_folder(self, path):
-        return False
-
     def get(self, path):
-        # path をみてフォルダかファイルか判別
-        print(f"path is -> {path}")
+        print(f"access to {path}")
 
-        # フォルダの場合
-        if self.is_folder(path) or path == "/folder/test/":
-            folder_structure = [
-                {
-                    "name": "test.md",
-                    'children': None,
-                },
-                {
-                    "name": "/subfolder",
-                    'children': [
-                        {
-                            'name': "sample.md",
-                            'children': None,
-                        },
-                        {
-                            'name': "mediator.md",
-                            'children': None,
-                        }
-                    ],
-                },
-            ]
-            self.render("folders.html", title=path, folder_structure=folder_structure)
-        elif self.is_file(path):
-            contents_html = "<h1>this is a test<h1><p>in really -> render md to html or file highlight"
-            self.render("view.html", title=path, contents=contents_html)
+        # TODO : defence from directory traversal
 
+        # prepare markdown renderer
+        renderer = MarkdownRenderer()
 
-class FolderViewPage(tornado.web.RequestHandler):
-    def get_folder_structure(self, path, level=0):
-        if level > 3:  # 3階層以上は表示しない
-            return []
-        structure = []
-        try:
-            for entry in os.listdir(path):
-                full_path = os.path.join(path, entry)
-                if os.path.isdir(full_path):
-                    structure.append({
-                        'name': entry,
-                        'children': self.get_folder_structure(full_path, level + 1)
-                    })
-                else:
-                    structure.append({'name': entry})
-        except Exception as e:
-            print(f"Error reading directory {path}: {e}")
-        return structure
+        # TODO : respawn keep files
 
-    def get(self, path):
-        print(f"target path is -> {path}")
-        title = "test yade"
-        folder_structure = [
-            {
-                "name": "test.md",
-                'children': None,
-            },
-            {
-                "name": "/subfolder",
-                'children': [
-                    {
-                        'name': "sample.md",
-                        'children': None,
-                    },
-                    {
-                        'name': "mediator.md",
-                        'children': None,
-                    }
-                ],
-            },
-        ]
-        self.render("folders.html", title=title, folder_structure=folder_structure)
-        """
-        print(f"target path is -> {path}")
-        savedir_base = os.getenv('FILES_ROOT', './filekeep/fileroot/')
-        print(f"base dir -> {savedir_base}")
-        abs_base = os.path.abspath(savedir_base)
-        print(f"base dir (abs) -> {abs_base}")
-        expected_fullpath = os.path.abspath(os.path.join(abs_base, "." + path))
-        print(f"fullpath is -> {expected_fullpath}")
-        title = os.path.basename(expected_fullpath)
-        folder_structure = self.get_folder_structure(expected_fullpath)
-        self.render("folders.html", title=title, folder_structure=folder_structure)
-"""
+        # パスをフォルダかファイルか存在しないか判別
+        basepath = os.getenv("FILES_ROOT",
+                             os.path.abspath(os.path.join(
+                                 os.path.dirname(__file__),
+                                 "filekeep/fileroot/")))
+        keeppath = os.getenv("KEEP_ROOT",
+                            os.path.abspath(os.path.join(
+                                os.path.dirname(__file__),
+                                "filekeep/keep/")))
+        leftmenu = renderer.render(os.path.join(keeppath, "leftmenu.md"))
+        entry_path = os.path.join(basepath, path)
+        if path == "":
+            # root dir access
+            folders = FolderParser(basepath).parse()
+            title = os.path.basename(path)
+            self.render("folders.html", title=title, leftmenu=leftmenu, folders=folders)
+            return
+        elif os.path.isfile(entry_path):
+            # file access
+            contents = renderer.render(entry_path)
+            title = os.path.basename(path)
+            self.render("view.html", title=title, leftmenu=leftmenu, contents=contents)
+            return
+        elif os.path.isdir(entry_path):
+            # directory access
+            folders = FolderParser(entry_path).parse()
+            title = os.path.basename(path)
+            self.render("folders.html", title=title, leftmenu=leftmenu, folders=folders)
+            return
+        else:
+            # redirect to create page
+            self.redirect(f"/edit/{path}")
+            return
+        # otherwise
+        self.send_error(404)
 
+class TopPageHandler(tornado.web.RequestHandler):
+    def get(self):
+        # prepare markdown renderer
+        renderer = MarkdownRenderer()
+
+        # TODO : respawn keep files
+
+        # render indeex.md
+        keeppath = os.getenv("KEEP_ROOT",
+                            os.path.abspath(os.path.join(
+                                os.path.dirname(__file__),
+                                "filekeep/keep/")))
+
+        leftmenu = renderer.render(os.path.join(keeppath, "leftmenu.md"))
+        indexpage = renderer.render(os.path.join(keeppath, "index.md"))
+        title = "Welcome to Botty Note"
+        self.render("view.html", title=title, leftmenu=leftmenu, contents=indexpage)
 
 # ---------------------------------------------------------
 
 def make_app():
     return tornado.web.Application(
         [
-            (r"/", MainHandler),
-            (r"/edit/(.+)", EditPageHandler),
-            (r"/folder(.*)", FolderViewPage),
-            (r"/view(.*)", ViewPageHandler)
+            (r"/edit/(.*)", EditPageHandler),
+            (r"/view/(.*)", ViewPageHandler),
+            (r"/", TopPageHandler)
         ],
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),

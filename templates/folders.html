@@ -17,18 +17,19 @@
         <div class="columns">
 
             <!-- 左側メニュー -->
-            {% module Template("modules/leftmenu.html") %}
+            {% module Template("modules/leftmenu.html", leftmenu=leftmenu) %}
 
             <!-- コンテンツエリア -->
             <div class="column">
                 <div class="column">
+                    <h1 class="title">{{ folders['name'] }}</h1>
                     <ul>
-                        {% for folder in folder_structure %}
-                            <li>{{ folder['name'] }}
-                                {% if folder['children'] %}
+                        {% for f1 in folders['folder'] %}
+                            <li>{{ f1['name'] }}
+                                {% if f1['folder'] %}
                                     <ul>
-                                        {% for child in folder['children'] %}
-                                            <li>{{ child['name'] }}</li>
+                                        {% for f2 in f1['folder'] %}
+                                            <li>{{ f2['name'] }}</li>
                                         {% end %}
                                     </ul>
                                 {% end %}
