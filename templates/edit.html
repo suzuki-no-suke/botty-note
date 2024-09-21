@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if page.title %}{{ page.title }}{% else %}Create new page{% end %}</title>
+    <title>{% if isnew %}Add{% else %}Edit{% end %} : {% if title %}{{ title }}{% else %}(new file){% end %}</title>
     <!-- Bulma CSS CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
 </head>
@@ -21,38 +21,39 @@
 
             <!-- コンテンツエリア -->
             <div class="column">
-                <form action="/edit" method="post">
+                <form action="/edit/" method="post">
+                    <input type="hidden" name="isnew" value="{% if isnew %}t{% end %}">
+                    <input type="hidden" name="prev_title" value="{% if title %}{{ title }}{% end %}">
                     <div class="field">
-                        <label for="folder" class="label">フォルダ</label>
+                        <label for="filename" class="label">ファイル名</label>
                         <div class="control">
-                            <input type="text" id="folder" name="folder" class="input" placeholder="フォルダ名を入力してください" readonly>
+                            <input type="text" id="filename" name="filename" class="input" placeholder="ファイル名＆フォルダを入力してください" value="{{ path }}">
                         </div>
                     </div>
+                    <!-- TBD 
                     <div class="field">
                         <label for="title" class="label">タイトル</label>
                         <div class="control">
                             <input type="text" id="title" name="title" class="input" placeholder="タイトルを入力してください">
                         </div>
                     </div>
-                    <div class="field is-grouped">
-                        <div class="control">
-                            <button type="submit" class="button is-primary">保存/作成</button>
-                        </div>
-                    </div>
+                    -->
                     <div class="field">
                         <label for="content" class="label">テキスト</label>
                         <div class="control">
-                            <textarea id="content" name="content" class="textarea" placeholder="テキストを入力してください"></textarea>
+                            <textarea id="content" name="content" class="textarea" placeholder="テキストを入力してください">{{ current_contents }}</textarea>
                         </div>
                     </div>
+                    <!-- TBD 
                     <div class="field">
                         <label for="tags" class="label">タグ</label>
                         <div class="control">
                             <input type="text" id="tags" name="tags" class="input" placeholder="タグを入力してください">
                         </div>
                     </div>
+                    -->
                     <div class="field is-grouped">
-                        <div class="control">
+                        <div class="control"></form>
                             <button type="submit" class="button is-primary">保存/作成</button>
                         </div>
                     </div>

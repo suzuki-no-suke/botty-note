@@ -21,21 +21,31 @@
 
             <!-- コンテンツエリア -->
             <div class="column">
-                <div class="column">
-                    <h1 class="title">{{ folders['name'] }}</h1>
-                    <ul>
-                        {% for f1 in folders['folder'] %}
-                            <li>{{ f1['name'] }}
-                                {% if f1['folder'] %}
+                <div class="column content">
+                    <h1 class="title">/{{ folders['name'] }}</h1>
+                    {% if len(folders['folder']) > 0 %}
+                        <ul>
+                            {% for f1 in folders['folder'] %}
+                                <li><a href="/view/{{ altbase }}{{ f1['name'] }}">{{ f1['name'] }}</a>
+                                {% if len(f1['folder']) > 0 %}
                                     <ul>
                                         {% for f2 in f1['folder'] %}
-                                            <li>{{ f2['name'] }}</li>
+                                            <li>
+                                                <a href="/view/{{ altbase }}{{ f1['name'] }}/{{ f2['name'] }}">
+                                                    {{ f2['name'] }}
+                                                </a>
+                                            </li>
                                         {% end %}
                                     </ul>
+                                </li>
+                                {% else %}
+                                </li>
                                 {% end %}
-                            </li>
-                        {% end %}
-                    </ul>
+                            {% end %}
+                        </ul>
+                    {% else %}
+                        <p> no file or directory </p>
+                    {% end %}
                 </div>
             </div>
         </div>
