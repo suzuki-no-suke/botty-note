@@ -21,7 +21,9 @@
 
             <!-- コンテンツエリア -->
             <div class="column">
-                <a class="button" href="/edit/{{ path }}">編集</a>
+                {% if path %}
+                    <a class="button" href="/edit/{{ path }}">編集</a>
+                {% end %}
                 <div class="content">
                     {% raw contents %}
                 </div>
@@ -31,6 +33,8 @@
 
     <!-- フッター -->
     {% module Template("modules/footer.html") %}
+
+    {% module Template("modules/chat_overlay.html", message=None, endpoint='ws://localhost:8888/chat/ws/') %}
 
 </body>
 </html>

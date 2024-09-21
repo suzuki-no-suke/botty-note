@@ -54,5 +54,7 @@
     <!-- フッター -->
     {% module Template("modules/footer.html") %}
 
+    {% module Template("modules/chat_overlay.html", message=None, endpoint='ws://localhost:8888/chat/ws/') %}
+
 </body>
 </html>

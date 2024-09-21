@@ -1,6 +1,9 @@
 import tornado.ioloop
 import tornado.web
+import tornado.websocket
+
 import os
+import json
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -70,7 +73,6 @@ class EditPageHandler(tornado.web.RequestHandler):
             with open(expected_fullpath, "wt", encoding="utf-8") as f:
                 f.write(content)
             self.redirect(f"/view/{filename}")
-
 
 
 
@@ -144,13 +146,68 @@ class TopPageHandler(tornado.web.RequestHandler):
         leftmenu = renderer.render(os.path.join(keeppath, "leftmenu.md"))
         indexpage = renderer.render(os.path.join(keeppath, "index.md"))
         title = "Welcome to Botty Note"
-        self.render("view.html", title=title, leftmenu=leftmenu, contents=indexpage)
+        self.render("view.html", title=title, leftmenu=leftmenu, contents=indexpage, path=None)
+
+# ---------------------------------------------------------
+# LLM Server function
+
+""" Definition Note
+connections = {
+    'history_id': {
+        'ws': <WebSocketServer>,
+        'messages': [
+            {   # chat v1 definition
+                'sender': <'human', 'chatbot'>,
+                'message': <str>
+            },
+            ...
+        ]
+    }
+}
+"""
+connections = {}
+
+# LLM Relay Ready Server
+class RelayOpeningHandler(tornado.web.RequestHandler):
+    async def get(self, history_id):
+        # get known internal endpoint
+        llm_portno = os.getenv("LLM_SERV_PORTNO", 7777)
+        llm_server_endpoint = f"http://localhost:{llm_portno}/chat/open/{history_id}"
+
+        # 非同期リクエストを作成
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        try:
+            response = await http_client.fetch(llm_server_endpoint)
+            print(response)
+            self.write(response.body)
+        except Exception as e:
+            self.set_status(500)
+            self.write(f"Error: {str(e)}")
+
+# LLM Relay Websocket server
+class WebSocketRelayServer(tornado.websocket.WebSocketHandler):
+    def on_open(self):
+        print("WebSocket opened")
+
+    def on_message(self, message):
+        print(f"Received message: {message}")
+        parsed_data = json.loads(message)
+        you_said = parsed_data['message']
+        response = {'type': 'chatbot', 'message': f"Echo : {you_said}"}
+        self.write_message(response)
+
+    def on_close(self):
+        print("WebSocket closed")
+
+
 
 # ---------------------------------------------------------
 
 def make_app():
     return tornado.web.Application(
         [
+            (r"/chat/open/(.*)", RelayOpeningHandler),
+            (r"/chat/ws/(.*)", WebSocketRelayServer),
             (r"/edit/(.*)", EditPageHandler),
             (r"/view/(.*)", ViewPageHandler),
             (r"/", TopPageHandler)

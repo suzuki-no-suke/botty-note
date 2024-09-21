@@ -1,0 +1,89 @@
+<div class="field">
+    <textarea id="chat_msg" class="textarea" rows="1" placeholder="チャットメッセージを入力してください"></textarea>
+    <button class="button" id="sendButton">送信</button>
+</div>
+
+<div class="section">
+    <div class="content">
+        <div id="chat_history">
+            {% if message %}
+                {% for m in message %}
+                    <article class="message is-primary">
+                        <div class="message-header">
+                            {{ m['sender'] }}
+                        </div>
+                        <div class="message-body">
+                            {% raw m['body'] %}
+                        </div>
+                    </article>
+                {% end %}
+            {% end %}
+        </div>
+    </div>
+</div>
+
+<script>
+let socket;
+const sendButton = document.getElementById('sendButton');
+
+function add_message(receivedMessage) {
+    const messageContainer = document.getElementById('chat_history'); // メッセージを表示するコンテナを取得
+
+    // 新しいメッセージを作成
+    const article = document.createElement('article');
+    article.className = 'message is-primary';
+    article.innerHTML = `
+      <div class="message-header">${receivedMessage.type}</div>
+      <div class="message-body">${receivedMessage.message}</div>
+    `;
+    
+    messageContainer.appendChild(article); // コンテナに新しいメッセージを追加
+};
+
+// WebSocket接続を開始
+function connectWebSocket() {
+  const endpoint = '{{ endpoint }}';
+  socket = new WebSocket(endpoint);
+  
+  // 接続が開いたとき
+  socket.onopen = function(event) {
+    console.log('WebSocket接続が確立されました');
+    sendButton.disabled = false; // 送信ボタンを有効化
+  };
+
+  // エラーが発生したとき
+  socket.onerror = function(error) {
+    console.error('WebSocket接続エラー:', error);
+    sendButton.disabled = true; // 送信ボタンを無効化
+  };
+
+  // 接続が閉じたとき
+  socket.onclose = function(event) {
+    console.log('WebSocket接続が閉じられました');
+    sendButton.disabled = true; // 送信ボタンを無効化
+  };
+
+  // メッセージを受信したとき
+  socket.onmessage = function(event) {
+    const receivedMessage = JSON.parse(event.data); // 受信したメッセージを解析
+    console.log(receivedMessage);
+    add_message(receivedMessage);
+  };
+
+}
+
+// ページ読み込み時にWebSocket接続を開始
+window.addEventListener('load', function() {
+  sendButton.disabled = true; // 初期状態で送信ボタンを無効化
+  connectWebSocket();
+});
+
+sendButton.addEventListener('click', function() {
+    const message = document.getElementById('chat_msg').value; // textarea からメッセージを取得
+    const payload = { type: "human", message: message }; // メッセージの形式を作成
+    socket.send(JSON.stringify(payload)); // WebSocket でメッセージを送信
+
+    add_message(payload);
+});
+
+</script>
