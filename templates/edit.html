@@ -21,6 +21,11 @@
 
             <!-- コンテンツエリア -->
             <div class="column">
+                {% if not isnew %}
+                    <a class="button" href="/view/{{ path }}">編集をやめる</a>
+                {% else %}
+                    <a class="button" href="/">編集をやめる(Topページへ)</a>
+                {% end %}
                 <form action="/edit/" method="post">
                     <input type="hidden" name="isnew" value="{% if isnew %}t{% end %}">
                     <input type="hidden" name="prev_title" value="{% if title %}{{ title }}{% end %}">

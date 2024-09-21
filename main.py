@@ -112,7 +112,7 @@ class ViewPageHandler(tornado.web.RequestHandler):
             # file access
             contents = renderer.render(entry_path)
             title = os.path.basename(path)
-            self.render("view.html", title=title, leftmenu=leftmenu, contents=contents)
+            self.render("view.html", title=title, leftmenu=leftmenu, contents=contents, path=path)
             return
         elif os.path.isdir(entry_path):
             # directory access

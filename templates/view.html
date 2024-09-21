@@ -21,7 +21,10 @@
 
             <!-- コンテンツエリア -->
             <div class="column">
-                {% raw contents %}
+                <a class="button" href="/edit/{{ path }}">編集</a>
+                <div class="content">
+                    {% raw contents %}
+                </div>
             </div>
         </div>
     </div>
