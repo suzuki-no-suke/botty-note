@@ -1,9 +1,11 @@
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+import asyncio
 
 import os
 import json
+import uuid
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -151,22 +153,6 @@ class TopPageHandler(tornado.web.RequestHandler):
 # ---------------------------------------------------------
 # LLM Server function
 
-""" Definition Note
-connections = {
-    'history_id': {
-        'ws': <WebSocketServer>,
-        'messages': [
-            {   # chat v1 definition
-                'sender': <'human', 'chatbot'>,
-                'message': <str>
-            },
-            ...
-        ]
-    }
-}
-"""
-connections = {}
-
 # LLM Relay Ready Server
 class RelayOpeningHandler(tornado.web.RequestHandler):
     async def get(self, history_id):
@@ -184,20 +170,76 @@ class RelayOpeningHandler(tornado.web.RequestHandler):
             self.set_status(500)
             self.write(f"Error: {str(e)}")
 
+connections = {}
+
 # LLM Relay Websocket server
 class WebSocketRelayServer(tornado.websocket.WebSocketHandler):
-    def on_open(self):
-        print("WebSocket opened")
+    def open(self, obj):
+        global connections
+        print(f"obj -> {obj}")
+        connid = uuid.uuid4().hex
+        connections[connid] = {'obj': self, 'type': 'unknown'}
+        print(f"WebSocket opening : {connid}")
+        print(f"current connections -> {connections}")
 
     def on_message(self, message):
+        global connections
         print(f"Received message: {message}")
         parsed_data = json.loads(message)
-        you_said = parsed_data['message']
-        response = {'type': 'chatbot', 'message': f"Echo : {you_said}"}
-        self.write_message(response)
+
+        # update type
+        for connid, conndata in connections.items():
+            if conndata['obj'] == self:
+                connections[connid]['obj'] = self
+                connections[connid]['type'] = parsed_data['type']
+        print(f"current connections -> {connections}")
+
+
+        if parsed_data['type'] == 'human':
+            print("human branch")
+            # find me
+            me = None
+            for connid, conndata in connections.items():
+                if conndata['type'] == 'human':
+                    me = conndata['obj']
+                    # call LLM server
+                    print(f"try sending : {connid}")
+                    asyncio.ensure_future(me.call_llm_api(parsed_data))
+            
+            # TODO : accepted / waiting message
+        elif parsed_data['type'] == 'chatbot':
+            print("bots branch")
+            # relay message
+            for _, cv in connections.items():
+                if cv['type'] == 'human':
+                    cv['obj'].write_message(parsed_data)
 
     def on_close(self):
-        print("WebSocket closed")
+        global connections
+        delete_marked = []
+        for connid, conndata in connections.items():
+            if conndata['obj'] == self:
+                delete_marked.append(connid)
+                print(f"WebSocket closed : {connid}")
+        for dels in delete_marked:
+            del connections[dels]
+ 
+    async def call_llm_api(self, parsed_data):
+        global connections
+        llm_portno = os.getenv("LLM_SERV_PORTNO", 7777)
+        llm_api_endpoint = f"http://localhost:{llm_portno}/chat/send/"
+        relay_ws_portno = os.getenv("PORTNO", 8888)
+        relay_ws_endpoint = f"ws://localhost:{relay_ws_portno}/chat/ws/"
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        parsed_data['endpoint'] = relay_ws_endpoint
+        print(f"sendto -> {llm_api_endpoint}, wait on -> {relay_ws_portno}, sending -> {parsed_data}")
+        try:
+            response = await http_client.fetch(llm_api_endpoint, method='POST', body=json.dumps(parsed_data))
+            print(response)
+            # return response
+        except Exception as e:
+            print(f"Error calling LLM API: {str(e)}")
+            # return {'type': 'bots_meta', 'status': 500, 'message': f"error calling LLM API : {str(e)}"}
 
 
 
