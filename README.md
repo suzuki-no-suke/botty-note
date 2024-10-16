@@ -1,5 +1,7 @@
 # BottyNote
 
+v0.1 - Tornado build 
+
 Goal : 
 Personal LLM-powered note webapp like NotebookLM
 
