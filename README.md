@@ -13,7 +13,20 @@ Objective : Cursor.ai inspired private note
 
 
 
-## To Run @ server
+## To Run 
+
+### Backend - Wiki
+
+
+
+### Frontend - Wiki
+
+
+
+
+### Backend - DuLLahan
+
+
 
 
 
