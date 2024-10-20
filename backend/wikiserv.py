@@ -1,36 +1,72 @@
-# backend/wikiserv.py
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 app = FastAPI()
 
+import uuid
+
+# really implemented
 # ---------------------------------------------------------
-# pydantic models
 
-# Folderモデル
+class FolderTreeNode(BaseModel):
+    """フォルダの入れ子関係を、フォルダIDのみ表示する"""
+    id: str
+    folders: List['FolderTreeNode'] = []
+
 class Folder(BaseModel):
-    id: int
+    """単一フォルダのデータを表示する"""
+    fullpath: str # root = /, root to this folder
+    id: str # uuid4
     name: str
+    num_files: int
+    children: List[str] = []    # only children folder id
 
-folders = []
+class FolderTree(BaseModel):
+    all_folders: Dict[str, Folder] = {}
+    root_node: FolderTreeNode    # tree of IDs
 
-# Pageモデル
-class Page(BaseModel):
-    id: int
-    title: str
-    content: str
+def parse_folder(dirpath, wikipath="/"):
+    folders = {}
+    tree = FolderTreeNode()
+    this_folder = Folder(
+        fullpath=wikipath,
+        id=str(uuid.uuid4),
+        name=os.path.basename(dirpath),
+        num_files=0,
+        children=[]
+    )
 
-pages = []
+    for name in os.listdir(dirpath):
+        entry_path = os.path.join(dirpath, name)
+        if os.path.isdir(entry_path):
+            pass
+        elif os.path.isfile(entry_path):
+            pass
 
-# Resourceモデル
-class Resource(BaseModel):
-    id: int
-    name: str
-    url: str
+    return folders, tree
 
-resources = []
+# フォルダツリー取得（常にルートから）
+@app.get("/tree", tags=["Tree"])
+async def get_full_tree() -> FolderTree:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+
+    if not os.path.isdir(basepath):
+        raise HTTPException(status_code=503, detail=f"WRONG wiki dir configuration")
+
+    # recursively get folders
+    folders, tree = parse_folder(basepath)
+
+    return FolderTree(all_folders=folders, tree=tree)
+
+
+
+"""
 
 # ---------------------------------------------------------
 # Folder処理
@@ -117,3 +153,4 @@ def get_resource(resource_id: int):
             return r
     raise HTTPException(status_code=404, detail="Resource not found")
 
+"""
