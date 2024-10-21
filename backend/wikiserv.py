@@ -27,16 +27,13 @@ class Folder(BaseModel):
     num_files: int
     children: List[str] = []    # only children folder id
 
-class FolderTree(BaseModel):
-    all_folders: Dict[str, Folder] = {}
-    root_node: FolderTreeNode    # tree of IDs
-
 def parse_folder(dirpath, wikipath="/"):
     folders = {}
-    tree = FolderTreeNode()
+    nid = str(uuid.uuid4())
+    node = FolderTreeNode(id=nid, folders=[])
     this_folder = Folder(
         fullpath=wikipath,
-        id=str(uuid.uuid4),
+        id=nid,
         name=os.path.basename(dirpath),
         num_files=0,
         children=[]
@@ -45,11 +42,21 @@ def parse_folder(dirpath, wikipath="/"):
     for name in os.listdir(dirpath):
         entry_path = os.path.join(dirpath, name)
         if os.path.isdir(entry_path):
-            pass
+            f, n = parse_folder(entry_path, wikipath + "/" + name)
+            folders.update(f)
+            print(folders)
+            node.folders.append(n)
+            this_folder.children.append(n.id)
         elif os.path.isfile(entry_path):
-            pass
+            this_folder.num_files += 1
 
-    return folders, tree
+    folders[nid] = this_folder
+
+    return folders, node
+
+class FolderTree(BaseModel):
+    all_folders: Dict[str, Folder] = {}
+    root_node: FolderTreeNode    # tree of IDs
 
 # フォルダツリー取得（常にルートから）
 @app.get("/tree", tags=["Tree"])
@@ -62,7 +69,10 @@ async def get_full_tree() -> FolderTree:
     # recursively get folders
     folders, tree = parse_folder(basepath)
 
-    return FolderTree(all_folders=folders, tree=tree)
+    print(folders)
+    print(tree)
+
+    return FolderTree(all_folders=folders, root_node=tree)
 
 
 
