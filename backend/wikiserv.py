@@ -16,6 +16,7 @@ import uuid
 
 class FolderTreeNode(BaseModel):
     """フォルダの入れ子関係を、フォルダIDのみ表示する"""
+    fullpath: str
     id: str
     folders: List['FolderTreeNode'] = []
 
@@ -25,28 +26,27 @@ class Folder(BaseModel):
     id: str # uuid4
     name: str
     num_files: int
-    children: List[str] = []    # only children folder id
+    children: List[str] = []    # only children folder path
 
 def parse_folder(dirpath, wikipath="/"):
     folders = {}
     nid = str(uuid.uuid4())
-    node = FolderTreeNode(id=nid, folders=[])
+    node = FolderTreeNode(fullpath=wikipath, id=nid, folders=[])
     this_folder = Folder(
         fullpath=wikipath,
         id=nid,
-        name=os.path.basename(dirpath),
+        name=os.path.basename(dirpath) if wikipath != "/" else "(root)",
         num_files=0,
-        children=[]
-    )
+        children=[])
 
     for name in os.listdir(dirpath):
         entry_path = os.path.join(dirpath, name)
         if os.path.isdir(entry_path):
-            f, n = parse_folder(entry_path, wikipath + "/" + name)
+            f, n = parse_folder(entry_path, wikipath + name + "/")
             folders.update(f)
             print(folders)
             node.folders.append(n)
-            this_folder.children.append(n.id)
+            this_folder.children.append([fol.fullpath for fol in f.values()])
         elif os.path.isfile(entry_path):
             this_folder.num_files += 1
 
@@ -74,6 +74,143 @@ async def get_full_tree() -> FolderTree:
 
     return FolderTree(all_folders=folders, root_node=tree)
 
+# ---------------------------------------------------------
+# create folder
+
+class FolderResult(BaseModel):
+    folder_path: str
+    succeed: bool
+    message: str
+
+class FolderCreate(BaseModel):
+    parent: str # path
+    name: str
+
+@app.post("/folder/create", tags=["folders"])
+async def create_folder(param: FolderCreate) -> FolderResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+    fullwikipath = param.parent + param.name
+
+    # check parent exists
+    parent_path = os.path.abspath(basepath + param.parent)
+    print(f"create parent -> {parent_path}")
+    if not os.path.isdir(parent_path):
+        return FolderResult(
+            folder_path=fullwikipath,
+            succeed=False,
+            message="parent folder not found")
+
+    # error if already exists
+    new_folder_path = os.path.join(parent_path, param.name)
+    print(f"new folder path -> {new_folder_path}")
+    if os.path.isdir(new_folder_path):
+        return FolderResult(
+            folder_path=fullwikipath,
+            succeed=False,
+            message="already exists")
+
+    # check path trajectory
+    if not new_folder_path.startswith(basepath):
+        return FolderResult(
+            folder_path=fullwikipath,
+            succeed=False,
+            message="path trajectory failure.")
+
+    # create folder
+    os.makedirs(new_folder_path)
+    return FolderResult(folder_path=fullwikipath, succeed=True, message="Folder created successfully")
+
+
+# ---------------------------------------------------------
+# folder detail
+@app.get("/folder/detail", tags=["folders"])
+async def get_folder_detail(dirpath: str) -> Folder | FolderResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+
+    # check parent exists
+    dir_fullpath = os.path.abspath(basepath + dirpath)
+    print(f"target fullpath -> {dir_fullpath}")
+    if not os.path.isdir(dir_fullpath):
+        return FolderResult(
+            folder_path=dirpath,
+            succeed=False,
+            message="folder not exists")
+
+    # check path trajectory
+    if not dir_fullpath.startswith(basepath):
+        return FolderResult(
+            folder_path=dirpath,
+            succeed=False,
+            message="path trajectory failure.")
+
+    # gether folder information
+    folder_info = Folder(
+        fullpath=dirpath,
+        id=str(uuid.uuid4()),   # TODO : uuid fixed values
+        name=os.path.basename(dirpath),
+        num_files=0,
+        children=[])
+
+    for entry in os.listdir(dir_fullpath):
+        entry_fullpath = os.path.join(dir_fullpath, entry)
+        if os.path.isdir(entry_fullpath):
+            folder_info.children.append(entry + "/")
+        elif os.path.isfile(entry_fullpath):
+            folder_info.num_files += 1
+
+    return folder_info
+
+# ---------------------------------------------------------
+# create file
+class FileResult(BaseModel):
+    file_path: str
+    succeed: bool
+    message: str
+
+class FileCreate(BaseModel):
+    parent: str # path
+    name: str   # need extension
+
+
+@app.post("/file/create", tags=["files"])
+async def create_file(param: FileCreate) -> FileResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+    fullwikipath = param.parent + param.name
+
+    # check parent exists
+    parent_path = os.path.abspath(basepath + param.parent)
+    print(f"create parent -> {parent_path}")
+    if not os.path.isdir(parent_path):
+        return FileResult(
+            file_path=fullwikipath,
+            succeed=False,
+            message="parent folder not found")
+
+    # error if already exists
+    new_file_path = os.path.join(parent_path, param.name)
+    print(f"new file path -> {new_file_path}")
+    if os.path.isdir(new_file_path):
+        return FileResult(
+            file_path=fullwikipath,
+            succeed=False,
+            message="already exists")
+
+    # check path trajectory
+    if not new_file_path.startswith(basepath):
+        return FileResult(
+            file_path=fullwikipath,
+            succeed=False,
+            message="path trajectory failure.")
+
+    # create empty file
+    with open(new_file_path, "wb") as f:
+        f.write(b"")
+    return FileResult(file_path=fullwikipath, succeed=True, message="File created successfully")
+
+# ---------------------------------------------------------
+# get content
 
 
 """
