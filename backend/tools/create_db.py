@@ -1,15 +1,16 @@
 import sqlite3
 import os
+import sys
 from dotenv import load_dotenv
 
 load_dotenv('../.env')
-DB_CONN = os.getenv('DB_CONN')
+DB_CONN = os.getenv('FS_DB')
 print(f"db connected -> {DB_CONN}")
 
-# when using sqlite3
+# when using sqlite3 (fullpath)
 db_file = DB_CONN.replace('sqlite:///', '')
 print(f"db file -> {db_file}")
-full_db_path = os.path.abspath(os.path.join("..", db_file))
+full_db_path = os.path.abspath(db_file)
 print(f"db fullpath -> {full_db_path}")
 conn = sqlite3.connect(full_db_path)
 cur = conn.cursor()
@@ -18,7 +19,7 @@ cur = conn.cursor()
 cur.execute('''
     CREATE TABLE IF NOT EXISTS file_system_meta (
         file_path TEXT PRIMARY KEY,
-        type TEXT CHECK (entry_type IN ('file', 'directory')) NOT NULL,
+        entry_type TEXT CHECK (entry_type IN ('file', 'directory')) NOT NULL,
         content_type TEXT,
         created_at TIMESTAMP,
         updated_at TIMESTAMP,
