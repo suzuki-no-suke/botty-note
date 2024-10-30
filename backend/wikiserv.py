@@ -9,6 +9,18 @@ from typing import List, Optional, Dict
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Svelteのデフォルトポート
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
 import uuid
 
 # really implemented
@@ -44,9 +56,9 @@ def parse_folder(dirpath, wikipath="/"):
         if os.path.isdir(entry_path):
             f, n = parse_folder(entry_path, wikipath + name + "/")
             folders.update(f)
-            print(folders)
+            # print(folders)
             node.folders.append(n)
-            this_folder.children.append([fol.fullpath for fol in f.values()])
+            this_folder.children += [fol.fullpath for fol in f.values()]
         elif os.path.isfile(entry_path):
             this_folder.num_files += 1
 
@@ -69,8 +81,8 @@ async def get_full_tree() -> FolderTree:
     # recursively get folders
     folders, tree = parse_folder(basepath)
 
-    print(folders)
-    print(tree)
+    import pprint
+    pprint.pprint(tree)
 
     return FolderTree(all_folders=folders, root_node=tree)
 
@@ -124,8 +136,19 @@ async def create_folder(param: FolderCreate) -> FolderResult:
 
 # ---------------------------------------------------------
 # folder detail
+
+class FolderDetail(BaseModel):
+    """単一フォルダのデータ(詳細)を表示する"""
+    fullpath: str # root = /, root to this folder
+    id: str # uuid4
+    name: str
+    parents: List[str] = [] # parent directories (fullpath)
+    files: List[str] = []   # file names (name only)
+    children: List[str] = []    # only children folder path (fullpath)
+
+
 @app.get("/folder/detail", tags=["folders"])
-async def get_folder_detail(dirpath: str) -> Folder | FolderResult:
+async def get_folder_detail(dirpath: str) -> FolderDetail | FolderResult:
     basepath = os.path.abspath(os.getenv("WIKI_DIR"))
 
     # check parent exists
@@ -145,19 +168,32 @@ async def get_folder_detail(dirpath: str) -> Folder | FolderResult:
             message="path trajectory failure.")
 
     # gether folder information
-    folder_info = Folder(
+    folder_info = FolderDetail(
         fullpath=dirpath,
         id=str(uuid.uuid4()),   # TODO : uuid fixed values
         name=os.path.basename(dirpath),
-        num_files=0,
+        parents=[],
+        files=[],
         children=[])
 
+    # parent path gethering
+    folders = [s.strip() for s in dirpath.split("/") if s.strip()]
+    for i in range(len(folders)):
+        parent = "/".join(folders[:i])
+        if len(parent) <= 0:
+            parent = "/"
+        else:
+            parent = "/" + parent + "/"
+        folder_info.parents.append(parent)
+    # print(f"parents-> {folder_info.parents}")
+    
+    # gether folder information
     for entry in os.listdir(dir_fullpath):
         entry_fullpath = os.path.join(dir_fullpath, entry)
         if os.path.isdir(entry_fullpath):
             folder_info.children.append(entry + "/")
         elif os.path.isfile(entry_fullpath):
-            folder_info.num_files += 1
+            folder_info.files.append(entry)
 
     return folder_info
 
