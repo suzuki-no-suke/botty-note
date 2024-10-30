@@ -303,6 +303,45 @@ async def get_file(filepath: str) -> FileDetail | FileResult:
 
     return detail
 
+# ---------------------------------------------------------
+# put content
+class FileContent(BaseModel):
+    fullpath: str
+    content_type: str | None
+    contents: str | None
+    tags: str | None
+
+@app.put("/file/update", tags=["files"])
+async def update_file(param: FileContent) -> FileResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+    fullwikipath = param.fullpath
+
+    # check path trajectory
+    actual_path = os.path.abspath(basepath + fullwikipath)
+    print(f"actual path -> {actual_path}")
+    if not actual_path.startswith(basepath):
+        return FileResult(
+            file_path=fullwikipath,
+            succeed=False,
+            message="path trajectory failure.")
+
+    # exist check
+    if not os.path.isfile(actual_path):
+        return FileResult(
+            file_path=fullwikipath,
+            succeed=False,
+            message="file not exists, create file first.")
+
+    # update file
+    with open(actual_path, "wt", encoding="utf-8") as f:
+        f.write(param.contents)
+    
+    return FileResult(
+        file_path=fullwikipath,
+        succeed=True,
+        message="file updated.")
+
 
 """
 

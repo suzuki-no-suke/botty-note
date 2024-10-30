@@ -40,6 +40,30 @@
 
     let fileContents = "";
 
+    async function save_content(fullpath: string) {
+        const response = await fetch("http://localhost:8000/file/update", {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fullpath: fullpath,
+                content_type: null,
+                contents: fileContents,
+                tags: null
+            })
+        });
+        if (response.ok) {
+            const result = await response.json();
+            console.log(result);
+            if (result.succeed) {
+                await get_content(fullpath);
+            }
+        } else {
+            console.error('Failed to update file');
+        }
+    }
+
 </script>
 
 <h2>list all folders</h2>
@@ -77,6 +101,7 @@
 <h3>{fileDetail.name} ({fileDetail.fullpath})</h3>
 
 <textarea bind:value={fileContents} rows="40" cols="120"></textarea>
+<button on:click={() => save_content(fileDetail.fullpath)}>保存</button>
 
 {:else}
 <h3>wait for ready ... file</h3>
