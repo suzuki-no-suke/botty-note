@@ -22,6 +22,7 @@ app.add_middleware(
 
 
 import uuid
+import re
 
 # really implemented
 # ---------------------------------------------------------
@@ -103,6 +104,13 @@ async def create_folder(param: FolderCreate) -> FolderResult:
     basepath = os.path.abspath(os.getenv("WIKI_DIR"))
     print(f"wiki basepath -> {basepath}")
     fullwikipath = param.parent + param.name
+
+    # return if folder name is empty or wrong format
+    if not param.name or not re.match(r'^[a-zA-Z0-9_\-]+$', param.name):
+        return FolderResult(
+            folder_path=fullwikipath,
+            succeed=False, 
+            message="folder name is wrong format")
 
     # check parent exists
     parent_path = os.path.abspath(basepath + param.parent)
@@ -214,6 +222,13 @@ async def create_file(param: FileCreate) -> FileResult:
     basepath = os.path.abspath(os.getenv("WIKI_DIR"))
     print(f"wiki basepath -> {basepath}")
     fullwikipath = param.parent + param.name
+    
+    # return if folder name is empty or wrong format
+    if not param.name or not re.match(r'^[a-zA-Z0-9_\-\.]+$', param.name):
+        return FileResult(
+            file_path=fullwikipath,
+            succeed=False, 
+            message="file name is wrong format")
 
     # check parent exists
     parent_path = os.path.abspath(basepath + param.parent)
@@ -247,6 +262,46 @@ async def create_file(param: FileCreate) -> FileResult:
 
 # ---------------------------------------------------------
 # get content
+class FileDetail(BaseModel):
+    parent: str # path
+    fullpath: str
+    name: str   # need extension
+    content_type: str | None
+    contents: str | None
+
+@app.get("/file/detail", tags=["files"])
+async def get_file(filepath: str) -> FileDetail | FileResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+    actual_path = os.path.abspath(basepath + filepath)
+
+    # check path trajectory
+    if not actual_path.startswith(basepath):
+        return FileResult(
+            file_path=filepath,
+            succeed=False,
+            message="path check failure")
+
+    # check file exists
+    print(f"target filepath -> {actual_path}")
+    if not os.path.exists(actual_path):
+        return FileResult(
+            file_path=filepath,
+            succeed=False,
+            message="file not exists")
+
+    # get whole content
+    detail = FileDetail(
+        parent=os.path.dirname(filepath),
+        fullpath=filepath,
+        name=os.path.basename(filepath),
+        content_type=None,  # TODO : fix type
+        contents=None)
+
+    with open(actual_path, "rt", encoding="utf-8") as f:
+        detail.contents = f.read()
+
+    return detail
 
 
 """
