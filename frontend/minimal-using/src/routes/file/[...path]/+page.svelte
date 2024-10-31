@@ -7,7 +7,7 @@
     let fileDetail;
 
     async function get_content(path: string) {
-        const response = await fetch(`${WIKI_BACK_URL}/file/detail?filepath=${path}`);
+        const response = await fetch(`${WIKI_BACK_URL}/file/detail?filepath=/${path}`);
         if (response.ok) {
             fileDetail = await response.json();
             console.log(fileDetail);
