@@ -3,6 +3,7 @@
     import { WIKI_BACK_URL } from "$lib/constants";
     import FolderTree from "$lib/FolderTree.svelte";
     import { goto } from "$app/navigation";
+    import { base } from "$app/paths";
 
     let treeData;
     let selectedData;
@@ -98,7 +99,7 @@
     };
 
     function to_edit_page(fullpath: string){
-        goto(`/file/${fullpath}`);
+        goto(`${base}/file/${fullpath}`);
     };
 </script>
 
