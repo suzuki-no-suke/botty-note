@@ -89,6 +89,9 @@ async def get_full_tree() -> FolderTree:
 # ---------------------------------------------------------
 # create folder
 
+def valid_basename(basename: str) -> bool:
+    return re.match(r'^[a-zA-Z0-9_\-\.\/\s\w]+$', basename)
+
 class FolderResult(BaseModel):
     folder_path: str
     succeed: bool
@@ -105,7 +108,7 @@ async def create_folder(param: FolderCreate) -> FolderResult:
     fullwikipath = param.parent + param.name
 
     # return if folder name is empty or wrong format
-    if not param.name or not re.match(r'^[a-zA-Z0-9_\-]+$', param.name):
+    if not valid_basename(param.name):
         return FolderResult(
             folder_path=fullwikipath,
             succeed=False, 
@@ -223,7 +226,7 @@ async def create_file(param: FileCreate) -> FileResult:
     fullwikipath = param.parent + param.name
     
     # return if folder name is empty or wrong format
-    if not param.name or not re.match(r'^[a-zA-Z0-9_\-\.]+$', param.name):
+    if not valid_basename(param.name):
         return FileResult(
             file_path=fullwikipath,
             succeed=False, 
