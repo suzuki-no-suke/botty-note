@@ -1,9 +1,11 @@
-
+<script lang="ts">
+    import { base } from "$app/paths";
+</script>
 
 <ul>
-    <li><a href="/tree">View Tree</a></li>
-    <li><a href="/folder">Folder View</a></li>
-    <li><a href="/getcontent">Get file contents</a></li>
-    <li><a href="/create">Create new file / folders</a></li>
-    <li><a href="/editcontent">Edit file contents</a></li>
+    <li><a href="{base}/tree">View Tree</a></li>
+    <li><a href="{base}/folder">Folder View</a></li>
+    <li><a href="{base}/getcontent">Get file contents</a></li>
+    <li><a href="{base}/create">Create new file / folders</a></li>
+    <li><a href="{base}/editcontent">Edit file contents</a></li>
 </ul>

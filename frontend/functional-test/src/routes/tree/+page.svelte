@@ -1,10 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { WIKI_BACK_URL } from '$lib/constants';
 
     let treeData;
 
     onMount(async () => {
-        const response = await fetch('http://localhost:8000/tree');
+        const response = await fetch(`${WIKI_BACK_URL}/tree`);
         if (response.ok) {
             treeData = await response.json();
             console.log(treeData);

@@ -1,10 +1,11 @@
 <script lang="ts">
+    import { WIKI_BACK_URL } from '$lib/constants';
     import { onMount } from 'svelte';
 
     let treeData;
 
     onMount(async () => {
-        const response = await fetch('http://localhost:8000/tree');
+        const response = await fetch(`${WIKI_BACK_URL}/tree`);
         if (response.ok) {
             treeData = await response.json();
             console.log(treeData);
@@ -16,7 +17,7 @@
     let folderDetail;
 
     async function folder_detail(path: string) {
-        const response = await fetch(`http://localhost:8000/folder/detail?dirpath=${path}`);
+        const response = await fetch(`${WIKI_BACK_URL}/folder/detail?dirpath=${path}`);
         if (response.ok) {
             folderDetail = await response.json();
             console.log(folderDetail);
@@ -28,7 +29,7 @@
     let fileDetail;
 
     async function get_content(path: string) {
-        const response = await fetch(`http://localhost:8000/file/detail?filepath=${path}`);
+        const response = await fetch(`${WIKI_BACK_URL}/file/detail?filepath=${path}`);
         if (response.ok) {
             fileDetail = await response.json();
             console.log(fileDetail);
@@ -41,7 +42,7 @@
     let fileContents = "";
 
     async function save_content(fullpath: string) {
-        const response = await fetch("http://localhost:8000/file/update", {
+        const response = await fetch(`${WIKI_BACK_URL}/file/update`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
