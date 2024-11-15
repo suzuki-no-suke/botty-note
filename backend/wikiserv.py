@@ -22,6 +22,7 @@ app.add_middleware(
 
 import uuid
 import re
+import shutil
 
 # really implemented
 # ---------------------------------------------------------
@@ -90,7 +91,7 @@ async def get_full_tree() -> FolderTree:
 # create folder
 
 def valid_basename(basename: str) -> bool:
-    return re.match(r'^[a-zA-Z0-9_\-\.\/\s\w]+$', basename)
+    return re.match(r'^[a-zA-Z0-9_\-\.\/\s\w＿・]+$', basename)
 
 class FolderResult(BaseModel):
     folder_path: str
@@ -206,6 +207,69 @@ async def get_folder_detail(dirpath: str) -> FolderDetail | FolderResult:
             folder_info.files.append(entry)
 
     return folder_info
+
+# ---------------------------------------------------------
+# move folder
+
+class FolderMove(BaseModel):
+    move_from: str  # fullpath
+    move_to: str    # fullpath
+
+@app.post("/folder/move", tags=["folders"])
+async def move_folder(param: FolderMove) -> FolderResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+
+    # パスの正規化
+    src_path = os.path.abspath(basepath + param.move_from)
+    dst_path = os.path.abspath(basepath + param.move_to)
+
+    # check path trajectory
+    if not src_path.startswith(basepath):
+        return FolderResult(
+            folder_path=src_path,
+            succeed=False,
+            message="src path trajectory failure.")
+    if not dst_path.startswith(basepath):
+        return FolderResult(
+            folder_path=src_path,
+            succeed=False,
+            message="dst path trajectory failure.")
+
+    # same path error
+    if src_path == dst_path:
+        return FolderResult(
+            folder_path=param.move_from,
+            succeed=False,
+            message="source and destination are same")
+
+    # source exist check
+    if not os.path.isdir(src_path):
+        return FolderResult(
+            folder_path=param.move_from,
+            succeed=False,
+            message="source folder not exists")
+
+    # destination not exist check
+    if os.path.exists(dst_path):
+        return FolderResult(
+            folder_path=param.move_to,
+            succeed=False,
+            message="destination already exists")
+
+    try:
+        # フォルダの移動実行
+        shutil.move(src_path, dst_path)
+        return FolderResult(
+            folder_path=param.move_to,
+            succeed=True,
+            message="folder moved successfully")
+    except Exception as e:
+        return FolderResult(
+            folder_path=param.move_from,
+            succeed=False,
+            message=f"move failed: {str(e)}")
+
 
 # ---------------------------------------------------------
 # create file
