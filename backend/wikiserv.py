@@ -220,7 +220,7 @@ async def move_folder(param: FolderMove) -> FolderResult:
     basepath = os.path.abspath(os.getenv("WIKI_DIR"))
     print(f"wiki basepath -> {basepath}")
 
-    # パスの正規化
+    # normalize target path
     src_path = os.path.abspath(basepath + param.move_from)
     dst_path = os.path.abspath(basepath + param.move_to)
 
@@ -269,6 +269,47 @@ async def move_folder(param: FolderMove) -> FolderResult:
             folder_path=param.move_from,
             succeed=False,
             message=f"move failed: {str(e)}")
+
+# ---------------------------------------------------------
+# delete folder
+
+class FolderDelete(BaseModel):
+    folder_path: str # fullpath
+
+@app.delete("/folder/delete", tags=["folders"])
+async def delete_folder(param: FolderDelete) -> FolderResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+
+    # normalize target path
+    target_path = os.path.abspath(basepath + param.folder_path)
+
+    # check path trajectory
+    if not target_path.startswith(basepath):
+        return FolderResult(
+            folder_path=param.folder_path,
+            succeed=False,
+            message="path trajectory failure")
+
+    # check if folder exists
+    if not os.path.isdir(target_path):
+        return FolderResult(
+            folder_path=param.folder_path,
+            succeed=False,
+            message="folder not exists")
+
+    try:
+        # delete folder and all contents recursively
+        shutil.rmtree(target_path)
+        return FolderResult(
+            folder_path=param.folder_path,
+            succeed=True,
+            message="folder deleted successfully")
+    except Exception as e:
+        return FolderResult(
+            folder_path=param.folder_path,
+            succeed=False,
+            message=f"delete failed: {str(e)}")
 
 
 # ---------------------------------------------------------
@@ -370,6 +411,92 @@ async def get_file(filepath: str) -> FileDetail | FileResult:
     return detail
 
 # ---------------------------------------------------------
+# move file
+
+class FileRename(BaseModel):
+    move_from: str
+    move_to: str
+
+@app.post("/file/move", tags=["files"])
+async def rename_file(param: FileRename) -> FileResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+
+    # check old path trajectory
+    old_actual_path = os.path.abspath(basepath + param.move_from)
+    if not old_actual_path.startswith(basepath):
+        return FileResult(
+            file_path=param.move_from,
+            succeed=False, 
+            message="old path trajectory check failure")
+
+    # check new path trajectory
+    new_actual_path = os.path.abspath(basepath + param.move_to) 
+    if not new_actual_path.startswith(basepath):
+        return FileResult(
+            file_path=param.move_to,
+            succeed=False,
+            message="new path trajectory check failure")
+
+    # check old file exists
+    if not os.path.isfile(old_actual_path):
+        return FileResult(
+            file_path=param.move_from,
+            succeed=False,
+            message="source file not exists")
+
+    # check new path not exists
+    if os.path.isfile(new_actual_path):
+        return FileResult(
+            file_path=param.move_to, 
+            succeed=False,
+            message="target path already exists")
+
+    # rename file
+    os.rename(old_actual_path, new_actual_path)
+
+    return FileResult(
+        file_path=param.move_to,
+        succeed=True,
+        message="file renamed successfully")
+
+
+# ---------------------------------------------------------
+# delete file
+class FileDelete(BaseModel):
+    filepath: str
+
+@app.delete("/file/delete", tags=["files"])
+async def delete_file(param: FileDelete) -> FileResult:
+    basepath = os.path.abspath(os.getenv("WIKI_DIR"))
+    print(f"wiki basepath -> {basepath}")
+
+    # check path trajectory
+    actual_path = os.path.abspath(basepath + param.filepath)
+    if not actual_path.startswith(basepath):
+        return FileResult(
+            file_path=param.filepath,
+            succeed=False,
+            message="path trajectory check failure")
+
+    # check file exists
+    if not os.path.isfile(actual_path):
+        return FileResult(
+            file_path=param.filepath,
+            succeed=False,
+            message="file not exists")
+
+    # delete file
+    os.remove(actual_path)
+
+    return FileResult(
+        file_path=param.filepath,
+        succeed=True,
+        message="file deleted successfully")
+
+
+
+# ---------------------------------------------------------
 # put content
 class FileContent(BaseModel):
     fullpath: str
@@ -407,93 +534,3 @@ async def update_file(param: FileContent) -> FileResult:
         file_path=fullwikipath,
         succeed=True,
         message="file updated.")
-
-
-"""
-
-# ---------------------------------------------------------
-# Folder処理
-@app.post("/folders/", response_model=Folder)
-def add_folder(folder: Folder):
-    folders.append(folder)
-    return folder
-
-@app.put("/folders/{folder_id}", response_model=Folder)
-def update_folder(folder_id: int, folder: Folder):
-    for idx, f in enumerate(folders):
-        if f.id == folder_id:
-            folders[idx] = folder
-            return folder
-    raise HTTPException(status_code=404, detail="Folder not found")
-
-@app.delete("/folders/{folder_id}")
-def delete_folder(folder_id: int):
-    global folders
-    folders = [f for f in folders if f.id != folder_id]
-    return {"message": "Folder deleted"}
-
-@app.get("/folders/", response_model=List[Folder])
-def list_folders():
-    return folders
-
-# ---------------------------------------------------------
-# Page処理
-@app.post("/pages/", response_model=Page)
-def add_page(page: Page):
-    pages.append(page)
-    return page
-
-@app.put("/pages/{page_id}", response_model=Page)
-def update_page(page_id: int, page: Page):
-    for idx, p in enumerate(pages):
-        if p.id == page_id:
-            pages[idx] = page
-            return page
-    raise HTTPException(status_code=404, detail="Page not found")
-
-@app.delete("/pages/{page_id}")
-def delete_page(page_id: int):
-    global pages
-    pages = [p for p in pages if p.id != page_id]
-    return {"message": "Page deleted"}
-
-@app.get("/pages/{page_id}", response_model=Page)
-def get_page(page_id: int):
-    for p in pages:
-        if p.id == page_id:
-            return p
-    raise HTTPException(status_code=404, detail="Page not found")
-
-# ---------------------------------------------------------
-# Resource処理
-@app.post("/resources/", response_model=Resource)
-def add_resource(resource: Resource):
-    resources.append(resource)
-    return resource
-
-@app.put("/resources/{resource_id}", response_model=Resource)
-def update_resource(resource_id: int, resource: Resource):
-    for idx, r in enumerate(resources):
-        if r.id == resource_id:
-            resources[idx] = resource
-            return resource
-    raise HTTPException(status_code=404, detail="Resource not found")
-
-@app.delete("/resources/{resource_id}")
-def delete_resource(resource_id: int):
-    global resources
-    resources = [r for r in resources if r.id != resource_id]
-    return {"message": "Resource deleted"}
-
-@app.get("/resources/", response_model=List[Resource])
-def list_resources():
-    return resources
-
-@app.get("/resources/{resource_id}", response_model=Resource)
-def get_resource(resource_id: int):
-    for r in resources:
-        if r.id == resource_id:
-            return r
-    raise HTTPException(status_code=404, detail="Resource not found")
-
-"""

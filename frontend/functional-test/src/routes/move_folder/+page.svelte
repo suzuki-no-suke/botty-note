@@ -58,11 +58,13 @@
     <p>{folderResult}</p>
 {/if}
 
-<label for="move_from">
+<label for="move_from">move from
     <input id="move_from" bind:value={moveFrom} />
 </label>
 
-<label for="move_to">
+<br/>
+
+<label for="move_to"> move to
     <input id="move_to" bind:value={moveTo} />
 </label>
 
