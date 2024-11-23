@@ -234,4 +234,9 @@
     :global(button) {
         @apply border p-1;
     }
+
+    :global(textarea) {
+        @apply border dark:border-gray-600;
+        @apply font-mono text-sm;
+    }
 </style>
